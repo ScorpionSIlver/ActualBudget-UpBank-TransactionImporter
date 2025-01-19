@@ -1,3 +1,6 @@
+#project based
+up_autorun.sh
+
 # Logs
 logs
 *.log

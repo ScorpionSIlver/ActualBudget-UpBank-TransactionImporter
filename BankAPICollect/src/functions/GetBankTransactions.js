@@ -37,7 +37,10 @@ async function getBudgetAccounts() {
     });
 
     const budgetId = process.env.ACTUAL_BUDGET_ID;
-    await api.downloadBudget(budgetId);
+    const encryptionPass = process.env.ACTUAL_BUDGET_ENCRYPTION_PASSWORD;
+    await api.downloadBudget(budgetId, {
+        password: encryptionPass,
+    });
 
     // Fetch and print all account IDs from Actual Budget
     const actualAccounts = await api.getAccounts(); // Assuming this method exists in your API
@@ -61,7 +64,9 @@ async function fetchTransactionsForAccount(accountId, accessToken) {
                     'Authorization': `Bearer ${accessToken}`
                 },
                 params: {
-                    'page[size]': 10  // Adjust size as needed
+                    'page[size]': 100,  // Adjust size as needed
+                    'filter[since]' :'2025-01-01T00:00:00+10:00'
+                    // 'filter[until]' : '2025-01-07T00:00:00+10:00'
                 }
             });
 
@@ -108,7 +113,10 @@ async function uploadTransactions(accounts) {
         });
 
         const budgetId = process.env.ACTUAL_BUDGET_ID;
-        await api.downloadBudget(budgetId);
+        const encryptionPass = process.env.ACTUAL_BUDGET_ENCRYPTION_PASSWORD;
+        await api.downloadBudget(budgetId, {
+            password: encryptionPass,
+        });
 
         // Fetch the access token and Actual Budget accounts
         const accessToken = process.env.UP_BANK_ACCESS_TOKEN;
@@ -156,7 +164,8 @@ async function uploadTransactions(accounts) {
 
               const formattedTransaction = {
                 account: actualBudgetAccountId,
-                date: new Date(transaction.attributes.settledAt || transaction.attributes.createdAt).toISOString().split('T')[0],
+                date: new Date (new Date(transaction.attributes.createdAt)-(new Date(transaction.attributes.createdAt).getTimezoneOffset()*60*1000)).toISOString().split('T')[0],
+                // date: new Date(transaction.attributes.settledAt || transaction.attributes.createdAt).toISOString().split('T')[0],
                 amount: Math.round(transaction.attributes.amount.value * 100),
                 payee_name: transaction.attributes.description || 'Unknown',
               };
@@ -177,7 +186,8 @@ async function uploadTransactions(accounts) {
             // Import transactions for this account
             if (formattedTransactions.length > 0) {
                 try {
-                    console.log(JSON.stringify(formattedTransactions));
+                    // console.log(JSON.stringify(formattedTransactions));
+                    // REMOVED 20250119
                     const result = await api.importTransactions(actualBudgetAccountId, formattedTransactions);
                     console.log(`Uploaded ${formattedTransactions.length} transactions for ${upAccountName}`);
                 } catch (importError) {
@@ -276,7 +286,14 @@ async function uploadWeeklyTransactions(weeklyTransactions) {
         });
 
         const budgetId = process.env.ACTUAL_BUDGET_ID;
-        await api.downloadBudget(budgetId);
+        const encryptionPass = process.env.ACTUAL_BUDGET_ENCRYPTION_PASSWORD;
+        await api.downloadBudget(budgetId, {
+            password: encryptionPass,
+        });
+
+        // ORIG BUDGET DOWNLOAD
+        // const budgetId = process.env.ACTUAL_BUDGET_ID;
+        // await api.downloadBudget(budgetId);
 
         // Fetch Actual Budget accounts
         const actualAccounts = await api.getAccounts();
@@ -330,7 +347,9 @@ async function uploadWeeklyTransactions(weeklyTransactions) {
 
               const formattedTransaction = {
                 account: actualBudgetAccountId,
-                date: new Date(transaction.attributes.settledAt || transaction.attributes.createdAt).toISOString().split('T')[0],
+                date: new Date (new Date(transaction.attributes.createdAt)-(new Date(transaction.attributes.createdAt).getTimezoneOffset()*60*1000)).toISOString().split('T')[0],
+                // Above is based on https://stackoverflow.com/questions/23593052/format-javascript-date-as-yyyy-mm-dd
+                //date: new Date(transaction.attributes.settledAt || transaction.attributes.createdAt).toISOString().split('T')[0],
                 amount: Math.round(transaction.attributes.amount.value * 100),
                 payee_name: transaction.attributes.description || 'Unknown',
               };
