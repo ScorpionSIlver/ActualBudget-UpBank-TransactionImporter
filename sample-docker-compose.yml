@@ -1,0 +1,10 @@
+services:
+  up-import:
+    container_name: Actual-UP-Import
+    image: nodemana/actualbudgetupimporter:latest
+    env_file: .env
+    environment:
+      - TZ=Australia/Sydney
+    #volumes:
+     # - ~/budget-folder:/tmp
+    restart: unless-stopped
