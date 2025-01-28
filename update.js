@@ -44,7 +44,7 @@ async function update() {
 
 startup();
 
-cron.schedule('0 * * * *', async () => {
+cron.schedule('0,5,7,12,15,20 * * * *', async () => {
     await update();
 });
 console.log('Cron job scheduled. Waiting for next execution.');
