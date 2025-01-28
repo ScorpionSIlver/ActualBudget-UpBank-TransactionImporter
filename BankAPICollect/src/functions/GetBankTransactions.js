@@ -11,7 +11,6 @@ const api = require('@actual-app/api');
 
 async function AuthenticateUp() {
     const accessToken = process.env.UP_BANK_ACCESS_TOKEN;
-    console.log(accessToken);
     try {
         const accountsResponse = await axios.get('https://api.up.com.au/api/v1/accounts', {
             headers: {
@@ -38,9 +37,13 @@ async function getBudgetAccounts() {
 
     const budgetId = process.env.ACTUAL_BUDGET_ID;
     const encryptionPass = process.env.ACTUAL_BUDGET_ENCRYPTION_PASSWORD;
-    await api.downloadBudget(budgetId, {
-        password: encryptionPass,
-    });
+    if (typeof encryptionPass === 'undefined' || encryptionPass == ""){
+        await api.downloadBudget(budgetId);
+    } else {
+        await api.downloadBudget(budgetId, {
+            password: encryptionPass,
+        });
+    }
 
     // Fetch and print all account IDs from Actual Budget
     const actualAccounts = await api.getAccounts(); // Assuming this method exists in your API
@@ -53,38 +56,45 @@ async function getBudgetAccounts() {
 //                          All Transactions For Accounts
 //=============================================================================
 
+
 async function fetchTransactionsForAccount(accountId, accessToken) {
-    let allTransactions = [];
-    let nextPageUrl = `https://api.up.com.au/api/v1/accounts/${accountId}/transactions`;
+  let allTransactions = [];
+  let nextPageUrl = `https://api.up.com.au/api/v1/accounts/${accountId}/transactions`;
+  
+  let syncStart = process.env.UP_BANK_SYNC_START;
+  // Check if syncStart is set
+  if (typeof syncStart === 'undefined' || syncStart == ""){
+    syncStart = "2015-01-01T00:00:00Z" // Start date that will cover all transactions
+  }
 
-    try {
-        while (nextPageUrl) {
-            const transactionsResponse = await axios.get(nextPageUrl, {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                },
-                params: {
-                    'page[size]': 100,  // Adjust size as needed
-                    'filter[since]' :'2025-01-01T00:00:00+10:00'
-                    // 'filter[until]' : '2025-01-07T00:00:00+10:00'
-                }
-            });
-
-            // Add current page's transactions to the array
-            allTransactions = [...allTransactions, ...transactionsResponse.data.data];
-
-            // Update nextPageUrl based on the links in the response
-            nextPageUrl = transactionsResponse.data.links.next || null;
-
-            console.log(`Fetched ${allTransactions.length} transactions so far`);
+  try {
+    while (nextPageUrl) {
+      const transactionsResponse = await axios.get(nextPageUrl, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
+        params: {
+          'page[size]': 100,  // Adjust size as needed
+          'filter[since]': syncStart  // Date filter
         }
+      });
 
-        return allTransactions;
-    } catch (error) {
-        console.error(`Error fetching transactions for account ${accountId}:`, error.response?.data || error.message);
-        throw new Error(`Error fetching transactions for account ${accountId}: ${error.message}`);
+      // Add current page's transactions to the array
+      allTransactions = [...allTransactions, ...transactionsResponse.data.data];
+
+      // Update nextPageUrl based on the links in the response
+      nextPageUrl = transactionsResponse.data.links.next || null;
+
+      console.log(`Fetched ${allTransactions.length} transactions so far`);
     }
+
+    return allTransactions;
+  } catch (error) {
+    console.error(`Error fetching transactions for account ${accountId}:`, error.response?.data || error.message);
+    throw new Error(`Error fetching transactions for account ${accountId}: ${error.message}`);
+  }
 }
+
 
 async function fetchAllTransactions(connection) {
     try {
@@ -93,7 +103,7 @@ async function fetchAllTransactions(connection) {
         let allTransactions = [];
 
         for (const account of accounts) {
-            console.log(`Fetching transactions for account: ${account.attributes.displayName}`);
+            //console.log(`Fetching transactions for account: ${account.attributes.displayName}`);
             const transactions = await fetchTransactionsForAccount(account.id, accessToken);
             allTransactions = [...allTransactions, ...transactions];
         }
@@ -114,9 +124,13 @@ async function uploadTransactions(accounts) {
 
         const budgetId = process.env.ACTUAL_BUDGET_ID;
         const encryptionPass = process.env.ACTUAL_BUDGET_ENCRYPTION_PASSWORD;
-        await api.downloadBudget(budgetId, {
-            password: encryptionPass,
-        });
+        if (typeof encryptionPass === 'undefined' || encryptionPass == ""){
+            await api.downloadBudget(budgetId);
+        } else {
+            await api.downloadBudget(budgetId, {
+                password: encryptionPass,
+            });
+        }
 
         // Fetch the access token and Actual Budget accounts
         const accessToken = process.env.UP_BANK_ACCESS_TOKEN;
@@ -130,7 +144,7 @@ async function uploadTransactions(accounts) {
             const upAccountId = account.id;
             const upAccountName = account.attributes.displayName;
 
-            console.log(`Processing transactions for account: ${upAccountName}`);
+            //console.log(`Processing transactions for account: ${upAccountName}`);
 
             // 1. Check for explicit mapping in environment variable
             let actualBudgetAccountId = accountMapping[upAccountId];
@@ -186,8 +200,6 @@ async function uploadTransactions(accounts) {
             // Import transactions for this account
             if (formattedTransactions.length > 0) {
                 try {
-                    // console.log(JSON.stringify(formattedTransactions));
-                    // REMOVED 20250119
                     const result = await api.importTransactions(actualBudgetAccountId, formattedTransactions);
                     console.log(`Uploaded ${formattedTransactions.length} transactions for ${upAccountName}`);
                 } catch (importError) {
@@ -222,7 +234,7 @@ async function fetchDateRangeTransactionsForAccount(accountId, accessToken, sinc
                 },
                 params: {
                     'page[size]': 100,  // Increased page size
-                    'filter[since]': since  // Add date filter
+                    'filter[since]': since  // Date filter
                 }
             });
 
@@ -232,7 +244,7 @@ async function fetchDateRangeTransactionsForAccount(accountId, accessToken, sinc
             // Update nextPageUrl based on the links in the response
             nextPageUrl = transactionsResponse.data.links.next || null;
 
-            console.log(`Fetched ${allTransactions.length} transactions so far for account ${accountId}`);
+            //console.log(`Fetched ${allTransactions.length} transactions so far for account ${accountId}`);
         }
 
         return allTransactions;
@@ -248,17 +260,30 @@ async function fetchTransactionsForPastWeek(connection) {
         const accounts = connection.data.data;
         let allTransactions = [];
 
-        // Calculate the date for past 24 hours
+        // Calculate the date for past one week
         const OneWeekAgo = new Date(Date.now() - 24 * 7 * 60 * 60 * 1000).toISOString();
+        const syncStart = process.env.UP_BANK_SYNC_START;
+        let maxPullDate;
+
+        // Check if syncStart date is after OneWeekAgo
+        if (typeof syncStart === 'undefined' || syncStart == ""){
+            maxPullDate = OneWeekAgo;
+        } else {
+            if (syncStart > OneWeekAgo){
+                maxPullDate = syncStart;
+            } else {
+                maxPullDate = OneWeekAgo;
+            }
+        }
 
         for (const account of accounts) {
-            console.log(`Fetching transactions for account: ${account.attributes.displayName}`);
+            //console.log(`Fetching transactions for account: ${account.attributes.displayName}`);
 
             try {
                 const transactions = await fetchDateRangeTransactionsForAccount(
                     account.id,
                     accessToken,
-                    OneWeekAgo
+                    maxPullDate
                 );
 
                 allTransactions = [...allTransactions, ...transactions];
@@ -269,11 +294,11 @@ async function fetchTransactionsForPastWeek(connection) {
             }
         }
 
-        console.log(`Total transactions fetched in past 24 hours: ${allTransactions.length}`);
+        //console.log(`Total transactions fetched in past week: ${allTransactions.length}`);
         return allTransactions;
     } catch (error) {
-        console.error('Error fetching transactions for past day:', error);
-        throw new Error('Error fetching transactions for past day: ' + error.message);
+        console.error('Error fetching transactions for past week:', error);
+        throw new Error('Error fetching transactions for past week: ' + error.message);
     }
 }
 
@@ -287,13 +312,13 @@ async function uploadWeeklyTransactions(weeklyTransactions) {
 
         const budgetId = process.env.ACTUAL_BUDGET_ID;
         const encryptionPass = process.env.ACTUAL_BUDGET_ENCRYPTION_PASSWORD;
-        await api.downloadBudget(budgetId, {
-            password: encryptionPass,
-        });
-
-        // ORIG BUDGET DOWNLOAD
-        // const budgetId = process.env.ACTUAL_BUDGET_ID;
-        // await api.downloadBudget(budgetId);
+        if (typeof encryptionPass === 'undefined' || encryptionPass == ""){
+            await api.downloadBudget(budgetId);
+        } else {
+            await api.downloadBudget(budgetId, {
+                password: encryptionPass,
+            });
+        }
 
         // Fetch Actual Budget accounts
         const actualAccounts = await api.getAccounts();
@@ -319,7 +344,7 @@ async function uploadWeeklyTransactions(weeklyTransactions) {
             const upAccountName = accountData.accountName;
             const transactions = accountData.transactions;
 
-            console.log(`Processing weekly transactions for account: ${upAccountName}`);
+            //console.log(`Processing weekly transactions for account: ${upAccountName}`);
 
             // 1. Check for explicit mapping in environment variable
             let actualBudgetAccountId = accountMapping[upAccountId];
@@ -342,8 +367,8 @@ async function uploadWeeklyTransactions(weeklyTransactions) {
                 continue; // Skip this account
             }
 
-            const formattedTransactions = transactions.map(transaction => {
-              const roundUpAmount = transaction.attributes.roundUp ? spendingTransaction.attributes.roundUp.amount.value : 0;
+            const formattedTransactions = transactions.flatMap(transaction => { // Use flatMap
+              const roundUpAmount = transaction.attributes.roundUp ? transaction.attributes.roundUp.amount.value : 0;
 
               const formattedTransaction = {
                 account: actualBudgetAccountId,
@@ -355,19 +380,15 @@ async function uploadWeeklyTransactions(weeklyTransactions) {
               };
 
               if (roundUpAmount !== 0) {
-                // Create an additional transaction for the round-up
                 const roundUpTransaction = {
-                  account: actualBudgetAccountId,
-                  date: formattedTransaction.date, // Use the same date as the spending transaction
-                  amount: Math.abs(roundUpAmount) * 100, // Positive amount in the Savings account
+                  account: actualBudgetAccountId, //Round up destination account
+                  date: formattedTransaction.date,
+                  amount: -Math.round(Math.abs(roundUpAmount) * 100),
                   payee_name: "Round Up Transfer",
                 };
-                console.log(roundUpTransaction);
-                // Return an array containing both transactions
-                return [formattedTransaction, roundUpTransaction];
+                return [formattedTransaction, roundUpTransaction]; // Return an array
               } else {
-                // Return the original formatted transaction if no round-up
-                return formattedTransaction;
+                return [formattedTransaction]; // Return an array with a single item
               }
             });
 
@@ -375,7 +396,7 @@ async function uploadWeeklyTransactions(weeklyTransactions) {
             if (formattedTransactions.length > 0) {
                 try {
                     const result = await api.importTransactions(actualBudgetAccountId, formattedTransactions);
-                    console.log(`Uploaded ${formattedTransactions.length} weekly transactions for ${upAccountName}`);
+                    //console.log(`Uploaded ${formattedTransactions.length} weekly transactions for ${upAccountName}`);
                 } catch (importError) {
                     console.error(`Error importing weekly transactions for ${upAccountName}:`, importError);
                 }
