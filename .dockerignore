@@ -10,3 +10,4 @@ run.sh
 actual-server
 docker-compose.yml
 sample-docker-compose.yml
+.github
