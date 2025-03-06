@@ -1,0 +1,26 @@
+name: Build and publish a Docker image to ghcr.io
+on:
+
+  # publish on pushes to the development branch (image tagged as "dev")
+  push:
+    branches:
+      - development
+
+jobs:
+  docker_publish:
+    runs-on: "ubuntu-20.04"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # https://github.com/marketplace/actions/push-to-ghcr
+      - name: Build and publish a Dev Docker image for ${{ github.repository }}
+        uses: macbre/push-to-ghcr@master
+        with:
+          image_name: ${{ github.repository }}  # it will be lowercased internally
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          image_tag: dev
+          # optionally push to the Docker Hub (docker.io)
+          # docker_io_token: ${{ secrets.DOCKER_IO_ACCESS_TOKEN }}  # see https://hub.docker.com/settings/security
+          # customize the username to be used when pushing to the Docker Hub
+          # docker_io_user: foobar  # see https://github.com/macbre/push-to-ghcr/issues/14
