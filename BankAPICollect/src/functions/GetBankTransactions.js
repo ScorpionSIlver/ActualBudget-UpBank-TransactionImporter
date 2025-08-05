@@ -199,6 +199,7 @@ async function uploadTransactions(accounts) {
                             payee: targetPayee.id,
                             payee_name: transaction.attributes.description || 'Unknown',
                             imported_id: transaction.id,
+                            cleared: transaction.attributes.status === "SETTLED",
                         };
                         
                         // Additional Checks for special transfer types (roundup & forward / covers)
@@ -241,6 +242,7 @@ async function uploadTransactions(accounts) {
                 amount: Math.round(transaction.attributes.amount.value * 100),
                 payee_name: transaction.attributes.description || 'Unknown',
                 imported_id: transaction.id,
+                cleared: transaction.attributes.status === "SETTLED",
               };
 
               return [formattedTransaction]; // Return an array with a single item
@@ -445,6 +447,7 @@ async function uploadWeeklyTransactions(weeklyTransactions) {
                             payee: targetPayee.id,
                             payee_name: transaction.attributes.description || 'Unknown',
                             imported_id: transaction.id,
+                            cleared: transaction.attributes.status === "SETTLED",
                         };
                         
                         // Additional Checks for special transfer types (roundup & forward / covers)
@@ -488,6 +491,7 @@ async function uploadWeeklyTransactions(weeklyTransactions) {
                 amount: Math.round(transaction.attributes.amount.value * 100),
                 payee_name: transaction.attributes.description || 'Unknown',
                 imported_id: transaction.id,
+                cleared: transaction.attributes.status === "SETTLED",
               };
 
               return [formattedTransaction]; // Return an array with a single item
