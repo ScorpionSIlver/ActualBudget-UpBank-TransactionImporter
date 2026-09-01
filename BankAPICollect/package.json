@@ -7,7 +7,7 @@
     "test": "echo \"No tests yet...\""
   },
   "dependencies": {
-    "@actual-app/api": "^26.8.1",
+    "@actual-app/api": "^26.9.0",
     "@azure/functions": "^4.0.0",
     "axios": "^1.7.8",
     "dotenv": "^16.4.7",
