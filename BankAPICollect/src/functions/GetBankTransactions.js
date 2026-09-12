@@ -264,7 +264,7 @@ async function uploadTransactions(accounts) {
             // Import transactions for this account
             if (formattedTransactions.length > 0) {
                 try {
-                    const result = await api.importTransactions(actualBudgetAccountId, formattedTransactions);
+                    const result = await api.importTransactions(actualBudgetAccountId, formattedTransactions, {payeeNameNormalization: 'original'});
                     console.log(`Uploaded ${formattedTransactions.length} transactions for ${upAccountName}`);
                 } catch (importError) {
                     console.error(`Error importing transactions for ${upAccountName}:`, importError);
@@ -526,7 +526,7 @@ async function uploadWeeklyTransactions(weeklyTransactions) {
             // Import transactions for this account
             if (formattedTransactions.length > 0) {
                 try {
-                    const result = await api.importTransactions(actualBudgetAccountId, formattedTransactions);
+                    const result = await api.importTransactions(actualBudgetAccountId, formattedTransactions, {payeeNameNormalization: 'original'});
                     //console.log(`Uploaded ${formattedTransactions.length} weekly transactions for ${upAccountName}`);
                 } catch (importError) {
                     console.error(`Error importing weekly transactions for ${upAccountName}:`, importError);
